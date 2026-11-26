@@ -446,10 +446,10 @@ with tab_summary:
         .reset_index()
     )
     per_house["pct"] = (per_house["anomali"] / per_house["total"] * 100).round(2)
-    st.markdown("**Flag anomali per rumah**")
+    st.markdown("**Statistik Deteksi Anomali per rumah**")
     st.dataframe(per_house, use_container_width=True, hide_index=True)
 
-    st.markdown("**Jumlah lonjakan per rumah**")
+    st.markdown("**Jumlah lonjakan per Rumah**")
     ev_counts = pd.Series([e["house"] for e in events]).value_counts().reset_index()
     ev_counts.columns = ["House_ID", "Jumlah lonjakan"]
     st.bar_chart(ev_counts.set_index("House_ID"))
