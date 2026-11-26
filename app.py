@@ -194,7 +194,8 @@ def preprocess(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
 def add_features(df: pd.DataFrame, window: int) -> pd.DataFrame:
     """Feature engineering 8 fitur per rumah — sama dengan notebook."""
-    def per_house(group):
+    parts = []
+    for _, group in df.groupby("House_ID"):
         group = group.sort_values("timestamp").copy()
         group["hour"] = group["timestamp"].dt.hour
         group["night_indicator"] = (group["hour"] < 6).astype(int)
@@ -207,10 +208,8 @@ def add_features(df: pd.DataFrame, window: int) -> pd.DataFrame:
         group["gap_from_rolling_mean"] = (
             group["Global_active_power"] - group["rolling_mean_24h"]
         )
-        return group
-
-    out = df.groupby("House_ID", group_keys=False).apply(per_house)
-    return out.reset_index(drop=True)
+        parts.append(group)
+    return pd.concat(parts, ignore_index=True)
 
 
 @st.cache_data(show_spinner=False)
