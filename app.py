@@ -369,7 +369,7 @@ def explain_event(ev: pd.DataFrame) -> tuple[list[str], list[str]]:
 # UI
 # ---------------------------------------------------------------------------
 
-st.title("⚡ PowerScan — Deteksi Lonjakan Listrik")
+st.title("PowerScan — Deteksi Lonjakan Listrik")
 st.caption(
     "Port Streamlit dari pipeline Isolation Forest per rumah di notebook PowerScan. "
     "Model: Isolation Forest (150 trees, contamination 0.10) dengan 8 fitur rolling 24 jam."
@@ -416,7 +416,7 @@ with st.spinner("Memproses data & melatih Isolation Forest per rumah..."):
 # Tab 1: Ringkasan
 # ---------------------------------------------------------------------------
 tab_summary, tab_chart, tab_cause, tab_table = st.tabs(
-    ["📊 Ringkasan", "📈 Grafik Anomali", "🔍 Penyebab & Saran", "📋 Tabel Hasil"]
+    ["Ringkasan", "Grafik Anomali", "Penyebab & Saran", "Tabel Hasil"]
 )
 
 with tab_summary:
