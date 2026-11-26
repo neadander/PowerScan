@@ -49,7 +49,7 @@ NUMERIC_COLS = [
     "Is_Anomaly",
 ]
 
-st.set_page_config(page_title="PowerScan — Deteksi Lonjakan Listrik", layout="wide")
+st.set_page_config(page_title="⚡PowerScan 📊", layout="wide")
 
 
 # ---------------------------------------------------------------------------
