@@ -55,21 +55,15 @@ st.set_page_config(page_title="PowerScan — Deteksi Lonjakan Listrik", layout="
 # Pipeline (sama dengan notebook)
 # ---------------------------------------------------------------------------
 
-def read_csv_flexible(file_bytes: bytes) -> pd.DataFrame:
-    """Baca CSV atau Excel (.xlsx/.xls) dengan deteksi format.
-
-    Untuk Excel: mencoba sheet 'Per_Jam' dulu (sesuai struktur workbook
-    PowerScan), lalu sheet pertama sebagai fallback.
-    """
+def _read_any(file_bytes: bytes, header=0) -> pd.DataFrame:
+    """Baca CSV atau Excel (.xlsx/.xls). Untuk Excel mencoba sheet 'Per_Jam'."""
     # Deteksi Excel via magic bytes (xlsx = ZIP 'PK', xls = OLE 'D0CF')
     if file_bytes[:2] == b"PK" or file_bytes[:4] == b"\xd0\xcf\x11\xe0":
         buf = io.BytesIO(file_bytes)
         try:
             xl = pd.ExcelFile(buf)
             sheet = "Per_Jam" if "Per_Jam" in xl.sheet_names else xl.sheet_names[0]
-            df = pd.read_excel(buf, sheet_name=sheet)
-            df.attrs["sheet"] = sheet
-            return df
+            return pd.read_excel(io.BytesIO(file_bytes), sheet_name=sheet, header=header)
         except Exception as exc:  # noqa: BLE001
             raise ValueError(f"Tidak dapat membaca file Excel: {exc}") from exc
 
@@ -92,12 +86,29 @@ def read_csv_flexible(file_bytes: bytes) -> pd.DataFrame:
         for dec in ([",", "."] if sep == ";" else [".", ","]):
             try:
                 df = pd.read_csv(io.StringIO(text), sep=sep, decimal=dec,
+                                 header=header,
                                  engine="python" if sep == "|" else "c")
                 if len(df.columns) >= 5:
                     return df
             except Exception as exc:  # noqa: BLE001
                 last_err = exc
     raise ValueError(f"Tidak dapat membaca CSV. {last_err}")
+
+
+def load_dataframe(file_bytes: bytes) -> pd.DataFrame:
+    """Baca file lalu coba offset header 0–4 sampai kolom wajib ditemukan."""
+    last_df = None
+    for header in range(5):
+        try:
+            df = normalize_columns(_read_any(file_bytes, header=header))
+        except Exception:  # noqa: BLE001
+            continue
+        last_df = df
+        if all(c in df.columns for c in REQUIRED_COLS):
+            return df
+    if last_df is not None:
+        return last_df
+    raise ValueError("File tidak dapat dibaca sama sekali.")
 
 
 # Normalisasi nama kolom: 'house_id', 'House ID', 'HOUSE_ID', 'Id_Rumah', dst.
@@ -147,6 +158,7 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
 def preprocess(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     """Validasi, parsing timestamp, dan pembersihan — seperti sel notebook."""
     stats = {}
+    df = normalize_columns(df.copy())
     missing = [c for c in REQUIRED_COLS if c not in df.columns]
     if missing:
         detected = ", ".join(str(c) for c in df.columns[:15])
@@ -156,8 +168,6 @@ def preprocess(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
             "Pastikan sheet `Per_Jam` terbaca dan nama kolom sesuai dataset."
         )
 
-    df = df.copy()
-    df = normalize_columns(df)
     df["timestamp"] = pd.to_datetime(
         df["Date"].astype(str) + " " + df["Time"].astype(str),
         dayfirst=True,
@@ -210,7 +220,7 @@ def run_pipeline(
     window: int,
 ) -> tuple[pd.DataFrame, dict, list]:
     """Jalankan seluruh pipeline. Mengembalikan (result_df, stats, events)."""
-    df = read_csv_flexible(file_bytes)
+    df = load_dataframe(file_bytes)
     df, stats = preprocess(df)
     feature_df = add_features(df, window)
 
