@@ -8,6 +8,7 @@ Jalankan:
 """
 
 import io
+import traceback
 
 import numpy as np
 import pandas as pd
@@ -408,6 +409,8 @@ with st.spinner("Memproses data & melatih Isolation Forest per rumah..."):
         )
     except Exception as exc:  # noqa: BLE001
         st.error(f"Gagal memproses file: {exc}")
+        with st.expander("Detail error (traceback)"):
+            st.code(traceback.format_exc())
         st.stop()
 
 # ---------------------------------------------------------------------------
