@@ -55,10 +55,25 @@ st.set_page_config(page_title="PowerScan — Deteksi Lonjakan Listrik", layout="
 # Pipeline (sama dengan notebook)
 # ---------------------------------------------------------------------------
 
-def read_csv_flexible(uploaded_file) -> pd.DataFrame:
-    """Baca CSV dengan deteksi separator/desimal (mendukung format 'koma-id')."""
-    raw = uploaded_file.getvalue()
-    text = raw.decode("utf-8-sig", errors="replace")
+def read_csv_flexible(file_bytes: bytes) -> pd.DataFrame:
+    """Baca CSV atau Excel (.xlsx/.xls) dengan deteksi format.
+
+    Untuk Excel: mencoba sheet 'Per_Jam' dulu (sesuai struktur workbook
+    PowerScan), lalu sheet pertama sebagai fallback.
+    """
+    # Deteksi Excel via magic bytes (xlsx = ZIP 'PK', xls = OLE 'D0CF')
+    if file_bytes[:2] == b"PK" or file_bytes[:4] == b"\xd0\xcf\x11\xe0":
+        buf = io.BytesIO(file_bytes)
+        try:
+            xl = pd.ExcelFile(buf)
+            sheet = "Per_Jam" if "Per_Jam" in xl.sheet_names else xl.sheet_names[0]
+            df = pd.read_excel(buf, sheet_name=sheet)
+            df.attrs["sheet"] = sheet
+            return df
+        except Exception as exc:  # noqa: BLE001
+            raise ValueError(f"Tidak dapat membaca file Excel: {exc}") from exc
+
+    text = file_bytes.decode("utf-8-sig", errors="replace")
 
     # Coba kombinasi separator/desimal yang umum
     candidates = [
@@ -135,7 +150,7 @@ def run_pipeline(
     window: int,
 ) -> tuple[pd.DataFrame, dict, list]:
     """Jalankan seluruh pipeline. Mengembalikan (result_df, stats, events)."""
-    df = read_csv_flexible(io.BytesIO(file_bytes))
+    df = read_csv_flexible(file_bytes)
     df, stats = preprocess(df)
     feature_df = add_features(df, window)
 
@@ -302,9 +317,11 @@ with st.sidebar:
     st.header("Unggah CSV")
     uploaded = st.file_uploader(
         "Dataset per-jam (mis. 40.000+ baris)",
-        type=["csv"],
+        type=["csv", "xlsx", "xls"],
     )
     st.markdown(
+        "Format didukung: **CSV** dan **Excel (.xlsx/.xls)** — untuk Excel, "
+        "sheet `Per_Jam` akan dipakai otomatis.\n\n"
         "Kolom wajib: `House_ID`, `Date`, `Time`, `Global_active_power`, "
         "`Voltage`, `Global_intensity`. Kolom lain opsional."
     )
