@@ -531,7 +531,7 @@ with tab_table:
     )
     csv_bytes = result_df.to_csv(index=False).encode("utf-8-sig")
     st.download_button(
-        "⬇️ Download hasil CSV",
+        "Download hasil CSV",
         data=csv_bytes,
         file_name="PowerScan_hasil_analisis.csv",
         mime="text/csv",
