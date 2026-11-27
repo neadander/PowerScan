@@ -492,8 +492,6 @@ with tab_chart:
 with tab_cause:
     st.markdown(f"### {len(events)} kejadian lonjakan terdeteksi")
     st.caption(
-        "Interpretasi berbasis heuristik dari fitur model — bukan diagnosis pasti. "
-        "Selalu verifikasi kondisi fisik instalasi."
     )
     if not events:
         st.success("Tidak ada lonjakan yang terdeteksi pada parameter ini.")
