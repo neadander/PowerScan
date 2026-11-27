@@ -49,7 +49,7 @@ NUMERIC_COLS = [
     "Is_Anomaly",
 ]
 
-st.set_page_config(page_title="⚡PowerScan 📊", layout="wide")
+st.set_page_config(page_title="PowerScan — Deteksi Lonjakan Listrik", layout="wide")
 
 
 # ---------------------------------------------------------------------------
@@ -369,7 +369,7 @@ def explain_event(ev: pd.DataFrame) -> tuple[list[str], list[str]]:
 # UI
 # ---------------------------------------------------------------------------
 
-st.title("PowerScan — Deteksi Lonjakan Listrik")
+st.title("⚡ PowerScan — Deteksi Lonjakan Listrik")
 st.caption(
     "Port Streamlit dari pipeline Isolation Forest per rumah di notebook PowerScan. "
     "Model: Isolation Forest (150 trees, contamination 0.10) dengan 8 fitur rolling 24 jam."
@@ -416,7 +416,7 @@ with st.spinner("Memproses data & melatih Isolation Forest per rumah..."):
 # Tab 1: Ringkasan
 # ---------------------------------------------------------------------------
 tab_summary, tab_chart, tab_cause, tab_table = st.tabs(
-    ["Ringkasan", "Grafik Anomali", "Penyebab & Saran", "Tabel Hasil"]
+    ["📊 Ringkasan", "📈 Grafik Anomali", "🔍 Penyebab & Saran", "📋 Tabel Hasil"]
 )
 
 with tab_summary:
@@ -446,10 +446,10 @@ with tab_summary:
         .reset_index()
     )
     per_house["pct"] = (per_house["anomali"] / per_house["total"] * 100).round(2)
-    st.markdown("**Statistik Deteksi Anomali per rumah**")
+    st.markdown("**Flag anomali per rumah**")
     st.dataframe(per_house, use_container_width=True, hide_index=True)
 
-    st.markdown("**Jumlah lonjakan per Rumah**")
+    st.markdown("**Jumlah lonjakan per rumah**")
     ev_counts = pd.Series([e["house"] for e in events]).value_counts().reset_index()
     ev_counts.columns = ["House_ID", "Jumlah lonjakan"]
     st.bar_chart(ev_counts.set_index("House_ID"))
@@ -492,22 +492,24 @@ with tab_chart:
 with tab_cause:
     st.markdown(f"### {len(events)} kejadian lonjakan terdeteksi")
     st.caption(
+        "Interpretasi berbasis heuristik dari fitur model — bukan diagnosis pasti. "
+        "Selalu verifikasi kondisi fisik instalasi."
     )
     if not events:
         st.success("Tidak ada lonjakan yang terdeteksi pada parameter ini.")
     else:
         for i, ev in enumerate(events[:20], 1):
             with st.expander(
-                f"#{i} · {ev['house']} · {ev['start']:%Y-%m-%d %H:%M} → "
-                f"{ev['end']:%Y-%m-%d %H:%M} · puncak {ev['peak_power_kw']:.2f} kW "
-                f"({ev['duration_h']} jam, {ev['n_points']} titik)",
+                f"#{i} · {ev['house']} · {ev['start']} → "
+                f"{ev['end']} · puncak {float(ev['peak_power_kw']):.2f} kW "
+                f"({int(ev['duration_h'])} jam, {int(ev['n_points'])} titik)",
                 expanded=(i <= 5),
             ):
                 m = st.columns(4)
-                m[0].metric("Puncak gap vs baseline", f"+{ev['max_gap_kw']:.2f} kW")
-                m[1].metric("Tegangan min", f"{ev['min_voltage']:.1f} V")
-                m[2].metric("Porsi malam", f"{ev['night_share']*100:.0f}%")
-                m[3].metric("Skor terburuk", f"{ev['worst_score']:.3f}")
+                m[0].metric("Puncak gap vs baseline", f"+{float(ev['max_gap_kw']):.2f} kW")
+                m[1].metric("Tegangan min", f"{float(ev['min_voltage']):.1f} V")
+                m[2].metric("Porsi malam", f"{float(ev['night_share'])*100:.0f}%")
+                m[3].metric("Skor terburuk", f"{float(ev['worst_score']):.3f}")
                 st.markdown("**Kemungkinan penyebab:**")
                 for r in ev["reasons"]:
                     st.write(f"- {r}")
@@ -529,7 +531,7 @@ with tab_table:
     )
     csv_bytes = result_df.to_csv(index=False).encode("utf-8-sig")
     st.download_button(
-        "Download hasil CSV",
+        "⬇️ Download hasil CSV",
         data=csv_bytes,
         file_name="PowerScan_hasil_analisis.csv",
         mime="text/csv",
